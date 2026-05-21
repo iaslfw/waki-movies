@@ -15,6 +15,5 @@ wheels/
 .idea/
 
 # files & folders
-*.md
 datasets/
 

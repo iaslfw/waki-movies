@@ -8,17 +8,17 @@ from src.data.hugging_face import upload_data_to_hugging_face
 def main() -> None:
     run_bot()
 
-    if (Settings.DATASETS_DIR / "hf_folder" / "prepared_movie-data.csv").exists():
-        print("Datafile already exists.")
-    else:
-        prepare_local_data()
-
-    if Settings.HF_ACCESS_TOKEN and Settings.HF_REPO_ID:
-        print("Starting upload to Hugging Face Hub...")
-        upload_data_to_hugging_face(
-            path="./src/data/datasets/hf_folder",
-            repo_id=Settings.HF_REPO_ID,
-        )
+    # if (Settings.DATASETS_DIR / "hf_folder" / "prepared_movie-data.csv").exists():
+    #     print("Datafile already exists.")
+    # else:
+    #     prepare_local_data()
+    #
+    # if Settings.HF_ACCESS_TOKEN and Settings.HF_REPO_ID:
+    #     print("Starting upload to Hugging Face Hub...")
+    #     upload_data_to_hugging_face(
+    #         path="./src/data/datasets/hf_folder",
+    #         repo_id=Settings.HF_REPO_ID,
+    #     )
 
 
 if __name__ == "__main__":
