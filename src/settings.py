@@ -13,3 +13,13 @@ class Settings:
 
     HF_ACCESS_TOKEN: str = os.getenv("HF_ACCESS_TOKEN", "")
     HF_REPO_ID: str = os.getenv("HF_REPO_ID", "")
+
+    TELEGRAM_API_TOKEN: str | None = os.getenv("TELEGRAM_API_TOKEN")
+
+    @classmethod
+    def validate(cls) -> None:
+        if not cls.TELEGRAM_API_TOKEN:
+            raise ValueError(
+                "TELEGRAM_API_TOKEN is missing. "
+                "Please create a .env file based on .env.template."
+            )
