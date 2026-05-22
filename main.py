@@ -19,27 +19,31 @@ def main() -> None:
     local_models_dir = Settings.MODELS_DIR
     model_path = local_models_dir / "final_model"
 
-    # 1. Daten prüfen und ggf. vorbereiten
+    # Check if local CSV file exists
     if not local_csv_file.exists():
         print("Preparing local data...")
         asyncio.run(create_local_data_file())
 
-    # 2. Modell prüfen und ggf. trainieren
+    # Checks if model exists
     if not model_path.exists():
         print("No trained model found. Start training...")
         print(
-            "Run: uv run tensorboard --logdir src/training/models\nTo monitor training progress in TensorBoard"
+            "Run: "
+            ""
+            "uv run tensorboard --logdir src/training/models"
+            ""
+            "To monitor training progress in TensorBoard"
         )
 
-        run_training(epochs=3, batch_size=8)
+        run_training(epochs=5, batch_size=8)
 
-    # 3. Predictor und Recommender erst initialisieren, wenn die Dateien existieren
+    # Init of predictor and recommender
     predictor = MoodPredictor()
     recommender = MovieRecommender(data_path=local_csv_file)
 
     prediction: dict[str, float] = predictor.predict(Settings.test_input)
 
-    print("Vorhersage für den Testtext:")
+    print("Idea:")
     tag: str
     prob: float
     for tag, prob in prediction.items():

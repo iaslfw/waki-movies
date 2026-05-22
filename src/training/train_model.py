@@ -1,4 +1,7 @@
-import argparse
+"""
+Training model for multi-label classification
+"""
+
 import os
 from typing import Any, cast
 
@@ -18,7 +21,15 @@ from src.training.dataset import get_tokenized_dataset
 def compute_metrics(
     eval_pred: EvalPrediction | tuple[np.ndarray[Any, Any], np.ndarray[Any, Any]],
 ) -> dict[str, float]:
-    """Calculates macro F1-score and ROC-AUC for multi-label classification."""
+    """Calculates macro F1-score and ROC-AUC for multi-label classification.
+
+    Args:
+        eval_pred: Either an EvalPrediction object or a tuple of (logits, labels).
+
+    Returns:
+        A dictionary with 'macro_f1' and 'roc_auc' scores.
+    """
+
     logits: Any
     labels: Any
     if isinstance(eval_pred, tuple):
@@ -43,8 +54,13 @@ def compute_metrics(
 
 
 def run_training(epochs: int = 3, batch_size: int = 8, dry_run: bool = False) -> None:
-    """Configures and runs the model training."""
-    # Create models directory inside src/training/ if not exists
+    """Configures and runs the model training.
+
+    Args:
+        epochs: Number of training epochs.
+        batch_size: Batch size for training and evaluation.
+        dry_run: If True, runs a quick test with a small subset of the data.
+    """
 
     print("Tokenize data...")
     tokenized_dataset, tokenizer = get_tokenized_dataset()
@@ -108,18 +124,4 @@ def run_training(epochs: int = 3, batch_size: int = 8, dry_run: bool = False) ->
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Train structural movie mood predictor model"
-    )
-    parser.add_argument(
-        "--epochs", type=int, default=3, help="Anzahl der Trainings-Epochen"
-    )
-    parser.add_argument("--batch_size", type=int, default=8, help="Batch-Größe")
-    parser.add_argument(
-        "--dry_run",
-        action="store_true",
-        help="Führt einen schnellen Testlauf mit minimalen Daten durch",
-    )
-
-    args = parser.parse_args()
-    run_training(epochs=args.epochs, batch_size=args.batch_size, dry_run=args.dry_run)
+    run_training()

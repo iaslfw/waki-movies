@@ -11,8 +11,14 @@ from src.settings import Settings
 
 
 def load_movie_data(local_path: str | Path) -> DatasetDict:
-    """Loads the movie mood dataset from Hugging Face Hub or falls back to local CSV."""
+    """Loads the movie mood dataset from Hugging Face Hub or falls back to local CSV.
 
+    Args:
+        local_path: Path to the local CSV file containing the dataset.
+
+    Returns:
+        A DatasetDict containing the training and test splits.
+    """
     dataset = load_dataset("csv", data_files=str(local_path))
 
     dataset_dict = dataset["train"].train_test_split(test_size=0.1, seed=42)
@@ -20,7 +26,14 @@ def load_movie_data(local_path: str | Path) -> DatasetDict:
 
 
 def get_tokenized_dataset(max_length: int = 256) -> tuple[DatasetDict, Any]:
-    """Loads the dataset, tokenizes it, and returns the tokenized DatasetDict and tokenizer."""
+    """Loads the dataset, tokenizes it, and returns the tokenized DatasetDict and tokenizer.
+
+    Args:
+        max_length: Maximum sequence length for tokenization. Defaults to 256.
+
+    Returns:
+        A tuple containing the tokenized DatasetDict and the tokenizer instance.
+    """
     tokenizer: Any = AutoTokenizer.from_pretrained(Settings.MODEL_NAME)  # type: ignore
 
     raw_dataset = load_movie_data(local_path=Settings.DATASET_PATH)

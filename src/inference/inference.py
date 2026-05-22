@@ -3,6 +3,7 @@ Inference module for predicting movie mood tags.
 """
 
 from pathlib import Path
+from typing import Any, cast
 
 import numpy as np
 import numpy.typing as npt
@@ -19,7 +20,6 @@ from src.settings import Settings
 
 
 class MoodPredictor:
-    # Explizite Typendeklarationen auf Klassenebene
     tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast
     model: PreTrainedModel
     device: torch.device
@@ -27,8 +27,11 @@ class MoodPredictor:
 
     def __init__(self, model_path: str | Path | None = None) -> None:
         """
-        Lädt das Modell und den Tokenizer in den Arbeitsspeicher.
-        Wird beim Start des Servers/Bots genau einmal aufgerufen.
+        Load model and tokenizer into memory.
+
+        Args:
+            model_path: Optional path to the trained model directory.
+            If None, it will look for the default path defined in Settings.
         """
         if model_path is None:
             model_path = (
@@ -37,26 +40,25 @@ class MoodPredictor:
         model_path = Path(model_path)
         if not model_path.exists():
             raise FileNotFoundError(
-                f"Das trainierte Modell wurde unter {model_path} nicht gefunden. "
-                "Bitte führe zuerst das Training aus."
+                f"No trained model found at {model_path}.Please train the model first."
             )
-        print(f"Lade Mood-Predictor von {model_path}...")
-        # Typsicheres Laden des Tokenizers
-        tokenizer_loaded = AutoTokenizer.from_pretrained(str(model_path))
+        print(f"Loading model from {model_path}...")
+
+        tokenizer_loaded = cast(Any, AutoTokenizer).from_pretrained(str(model_path))
         if not isinstance(
             tokenizer_loaded, (PreTrainedTokenizer, PreTrainedTokenizerFast)
         ):
-            raise TypeError("Geladener Tokenizer entspricht nicht dem erwarteten Typ.")
+            raise TypeError("Wrong tokenizer type.")
         self.tokenizer = tokenizer_loaded
 
-        model_loaded = AutoModelForSequenceClassification.from_pretrained(
+        model_loaded = cast(Any, AutoModelForSequenceClassification).from_pretrained(
             str(model_path)
         )
         if not isinstance(model_loaded, PreTrainedModel):
-            raise TypeError("Geladenes Modell entspricht nicht dem erwarteten Typ.")
+            raise TypeError("Wrong model type.")
         self.model = model_loaded
 
-        # Device-Handling (Nutzt CUDA oder Apple Silicon MPS, falls verfügbar)
+        # Either CUDA or Apple Silicon MPS or fallback to CPU
         self.device = torch.device(
             "cuda"
             if torch.cuda.is_available()
@@ -64,45 +66,44 @@ class MoodPredictor:
             if torch.backends.mps.is_available()
             else "cpu"
         )
-        self.model.to(self.device)
-        # Setzt das Modell in den Evaluierungs-Modus (schaltet Dropout etc. ab)
+        self.model.to(device=self.device)  # type: ignore
         self.model.eval()
 
-        # Lade die Mood-Tags dynamisch
         self.mood_tags = Settings.create_mood_list()
         print(
-            f"Modell auf Gerät geladen: {self.device}. {len(self.mood_tags)} Mood-Tags geladen."
+            f"Model loaded on device: {self.device}. {len(self.mood_tags)} mood tags loaded."
         )
 
     def predict(self, text: str) -> dict[str, float]:
         """
-        Nimmt einen Text entgegen und gibt ein Dictionary mit allen Tags
-        und ihren berechneten Wahrscheinlichkeiten zurück.
+        Takes a text as input and returns a dictionary with all tags
+        and their calculated probabilities.
+
+        Args:
+            text: The input text for which to predict mood tags.
+        Returns:
+            A dictionary mapping each mood tag to its predicted probability.
         """
-        # 1. Text tokenisieren und Tensors auf das richtige Gerät verschieben
         inputs = self.tokenizer(
             text,
-            return_tensors="pt",  # 'pt' steht für PyTorch-Tensoren
+            return_tensors="pt",  # 'pt' = PyTorch-Tensoren
             padding=True,
             truncation=True,
             max_length=128,
         )
-        inputs = {k: v.to(self.device) for k, v in inputs.items()}
+        inputs_dict: dict[str, torch.Tensor] = dict(inputs)  # type: ignore
+        inputs_device = {k: v.to(self.device) for k, v in inputs_dict.items()}
 
-        # 2. Modellvorhersage (ohne Gradientenberechnung -> spart Speicher & Zeit)
-        with torch.no_grad():
-            outputs = self.model(**inputs)
+        with torch.no_grad():  # No gradients needed for inference
+            outputs = self.model(**inputs_device)
 
-        # 3. Logits auf CPU kopieren, extrahieren und Sigmoid anwenden (Werte zwischen 0 und 1)
-        logits: npt.NDArray[np.float32] = outputs.logits[0].cpu().numpy()
-        probs: npt.NDArray[np.float32] = 1.0 / (1.0 + np.exp(-logits))
+        logits: npt.NDArray[Any] = outputs.logits[0].cpu().numpy()
+        probs: npt.NDArray[Any] = 1.0 / (1.0 + np.exp(-logits))
 
-        # 4. Den Vektor (probs) mit den Namen der Mood-Tags verknüpfen
         results: dict[str, float] = {}
         for i, tag in enumerate(self.mood_tags):
             results[tag] = float(probs[i])
 
-        # 5. Optional: Zur besseren Übersicht absteigend sortieren
         sorted_results = dict(
             sorted(results.items(), key=lambda item: item[1], reverse=True)
         )

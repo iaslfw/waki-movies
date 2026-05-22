@@ -8,7 +8,12 @@ from src.settings import Settings
 
 
 def upload_data_to_hugging_face(path: Path, repo_id: str) -> None:
-    """Example function to connect to Hugging Face Hub and upload a dataset."""
+    """Example function to connect to Hugging Face Hub and upload a dataset.
+
+    Args:
+        path: Path to the folder containing the dataset.
+        repo_id: Repository ID in the format "username/repo_name" where the dataset should be uploaded.
+    """
 
     login(token=Settings.HF_ACCESS_TOKEN)
 

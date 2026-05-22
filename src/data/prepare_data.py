@@ -15,7 +15,13 @@ disable_progress_bar()
 async def _download_data_from_hugging_face(
     repo_id: str, file_name: str, token: str
 ) -> pd.DataFrame:
-    """Loads a specific dataset file from Hugging Face asynchronously on a background thread."""
+    """Loads a specific dataset file from Hugging Face asynchronously on a background thread.
+
+    Args:
+        repo_id: Repository ID in the format "username/repo_name" where the dataset is located.
+        file_name: Name of the file to load from the dataset repository.
+        token: Hugging Face access token for authentication.
+    """
     print(f"Start Download: {file_name}...")
     dataset: DatasetDict = await asyncio.to_thread(
         lambda: load_dataset(repo_id, data_files=file_name, token=token)
