@@ -53,7 +53,7 @@ def compute_metrics(
     return {"macro_f1": float(macro_f1), "roc_auc": float(roc_auc)}
 
 
-def run_training(epochs: int = 3, batch_size: int = 8, dry_run: bool = False) -> None:
+def run_training(epochs: int = 12, batch_size: int = 32, dry_run: bool = False) -> None:
     """Configures and runs the model training.
 
     Args:

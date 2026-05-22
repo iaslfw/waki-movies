@@ -26,9 +26,10 @@ class Settings:
     MODEL_NAME = "distilbert-base-uncased"
     DECISION_THRESHOLD = 0.5
 
-    test_input = """I'm looking for an epic adventure that explores the tension between two worlds through a sweeping, mythic romance.
-        It's a high-stakes journey set within a visually breathtaking,
-        hidden underwater civilization that feels both ancient and advanced.
+    test_input = """I'm in the mood for a gripping survival story. 
+    There's this movie about an astronaut who gets accidentally abandoned on Mars after 
+    his crew assumes he died in a massive storm. It's all about his fight to stay alive 
+    against the odds—it sounds like a really intense, high-stakes watch.
     """  # Description of aqua-man
 
     @classmethod

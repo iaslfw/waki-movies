@@ -12,6 +12,7 @@ from src.training.train_model import run_training
 
 
 def main() -> None:
+
     # upload_path: Path = Settings.BASE_DIR / "src" / "data" / "raw-movie_data"
     # upload_data_to_hugging_face(path=upload_path, repo_id=Settings.HF_REPO_ID)
 
