@@ -1,9 +1,8 @@
+import json
 import os
 from pathlib import Path
 
 from dotenv import load_dotenv
-
-from src.training.config import MODEL_NAME, MOOD_TAGS
 
 load_dotenv()
 
@@ -11,18 +10,38 @@ load_dotenv()
 class Settings:
     """Global object that contains projectwide constants."""
 
-    BASE_DIR = Path(__file__).parent.parent
-    DATASETS_DIR = Path(__file__).parent / "data"
-
+    # API Tokens
     HF_ACCESS_TOKEN: str = os.getenv("HF_ACCESS_TOKEN", "")
     HF_REPO_ID: str = os.getenv("HF_REPO_ID", "")
-
     TELEGRAM_API_TOKEN: str | None = os.getenv("TELEGRAM_API_TOKEN")
 
-    # Import config variables to expose them globally
+    # Paths
+    BASE_DIR = Path(__file__).parent.parent
+    DATASETS_DIR = Path(__file__).parent / "data"
+    MODELS_DIR = Path(__file__).parent / "training" / "models"
+    MOOD_TAGS_PATH = Path(__file__).parent / "data" / "mood_tags.json"
+    DATASET_PATH = Path(__file__).parent / "data" / "cleaned_movie_data.csv"
 
-    MODEL_NAME = MODEL_NAME
-    MOOD_TAGS = MOOD_TAGS
+    # Model and training configs
+    MODEL_NAME = "distilbert-base-uncased"
+    DECISION_THRESHOLD = 0.5
+
+    test_input = """I'm looking for an epic adventure that explores the tension between two worlds through a sweeping, mythic romance.
+        It's a high-stakes journey set within a visually breathtaking,
+        hidden underwater civilization that feels both ancient and advanced.
+    """  # Description of aqua-man
+
+    @classmethod
+    def create_mood_list(cls) -> list[str]:
+        if cls.MOOD_TAGS_PATH.exists():
+            with open(cls.MOOD_TAGS_PATH, "r", encoding="utf-8") as f:
+                mood_tags = json.load(f)
+                return mood_tags
+        else:
+            print(
+                f"Warning: {cls.MOOD_TAGS_PATH} not found. Returning empty mood list."
+            )
+            return []
 
     @classmethod
     def validate(cls) -> None:
@@ -30,4 +49,9 @@ class Settings:
             raise ValueError(
                 "TELEGRAM_API_TOKEN is missing. "
                 "Please create a .env file based on .env.template."
+            )
+        if not cls.HF_ACCESS_TOKEN or not cls.HF_REPO_ID:
+            print(
+                "Warning: HF_ACCESS_TOKEN or HF_REPO_ID is missing. "
+                "Hugging Face Hub upload will be disabled. Check .env.template"
             )

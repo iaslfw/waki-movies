@@ -1,11 +1,13 @@
 """Module to upload merged dataset to HuggingFace Hub."""
 
+from pathlib import Path
+
 from huggingface_hub import login, upload_folder
 
 from src.settings import Settings
 
 
-def upload_data_to_hugging_face(path: str, repo_id: str) -> None:
+def upload_data_to_hugging_face(path: Path, repo_id: str) -> None:
     """Example function to connect to Hugging Face Hub and upload a dataset."""
 
     login(token=Settings.HF_ACCESS_TOKEN)

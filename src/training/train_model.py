@@ -1,6 +1,5 @@
 import argparse
 import os
-from pathlib import Path
 from typing import Any, cast
 
 import numpy as np
@@ -12,7 +11,7 @@ from transformers import (  # type: ignore
     TrainingArguments,
 )
 
-from src.training.config import MODEL_NAME, MOOD_TAGS
+from src.settings import Settings
 from src.training.dataset import get_tokenized_dataset
 
 
@@ -29,7 +28,7 @@ def compute_metrics(
 
     # Sigmoid function
     probs = 1 / (1 + np.exp(-logits))
-    predictions = (probs >= 0.5).astype(float)
+    predictions = (probs >= Settings.DECISION_THRESHOLD).astype(float)
 
     # Calculate metrics
     macro_f1 = f1_score(labels, predictions, average="macro", zero_division=0)
@@ -43,11 +42,9 @@ def compute_metrics(
     return {"macro_f1": float(macro_f1), "roc_auc": float(roc_auc)}
 
 
-def run_training(epochs: int, batch_size: int, dry_run: bool = False) -> None:
+def run_training(epochs: int = 3, batch_size: int = 8, dry_run: bool = False) -> None:
     """Configures and runs the model training."""
     # Create models directory inside src/training/ if not exists
-    output_dir = Path(__file__).parent / "models"
-    output_dir.mkdir(parents=True, exist_ok=True)
 
     print("Tokenize data...")
     tokenized_dataset, tokenizer = get_tokenized_dataset()
@@ -62,19 +59,19 @@ def run_training(epochs: int, batch_size: int, dry_run: bool = False) -> None:
         )
         epochs = 1
 
-    print(f"Init model: {MODEL_NAME}")
-    num_labels = len(MOOD_TAGS)
+    print(f"Init model: {Settings.MODEL_NAME}")
+    num_labels = len(Settings.create_mood_list())  # type: ignore
     model: Any = cast(Any, AutoModelForSequenceClassification).from_pretrained(
-        MODEL_NAME,
+        Settings.MODEL_NAME,
         problem_type="multi_label_classification",
         num_labels=num_labels,
     )
 
     print("Config training-arguments...")
-    os.environ["TENSORBOARD_LOGGING_DIR"] = str(output_dir / "logs")
+    os.environ["TENSORBOARD_LOGGING_DIR"] = str(Settings.MODELS_DIR / "logs")
 
     training_args = TrainingArguments(
-        output_dir=str(output_dir / "checkpoints"),
+        output_dir=str(Settings.MODELS_DIR / "checkpoints"),
         eval_strategy="epoch",
         save_strategy="epoch",
         logging_strategy="epoch",
@@ -83,10 +80,10 @@ def run_training(epochs: int, batch_size: int, dry_run: bool = False) -> None:
         per_device_eval_batch_size=batch_size,
         num_train_epochs=epochs,
         weight_decay=0.01,
+        warmup_steps=0.1,
         load_best_model_at_end=True,
         metric_for_best_model="macro_f1",
         save_total_limit=2,
-        # MPS or CUDA support will be auto-detected by transformers
         use_cpu=False,  # Allow MPS or CUDA if available
         report_to="tensorboard",
     )
@@ -104,9 +101,9 @@ def run_training(epochs: int, batch_size: int, dry_run: bool = False) -> None:
     print("start Training...")
     trainer.train()  # type: ignore
 
-    print(f"Safe best model in: {output_dir}")
-    model.save_pretrained(str(output_dir / "final_model"))  # type: ignore
-    tokenizer.save_pretrained(str(output_dir / "final_model"))
+    print(f"Safe best model in: {Settings.MODELS_DIR}")
+    model.save_pretrained(str(Settings.MODELS_DIR / "final_model"))  # type: ignore
+    tokenizer.save_pretrained(str(Settings.MODELS_DIR / "final_model"))
     print("Training completed, model saved.")
 
 

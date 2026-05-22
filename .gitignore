@@ -20,5 +20,3 @@ datasets/
 info/
 logs/
 models/
-
-src/training/models/
