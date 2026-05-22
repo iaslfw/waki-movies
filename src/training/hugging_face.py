@@ -1,4 +1,7 @@
+"""Module to upload merged dataset to HuggingFace Hub."""
+
 from huggingface_hub import login, upload_folder
+
 from src.settings import Settings
 
 

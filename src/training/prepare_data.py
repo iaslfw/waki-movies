@@ -1,4 +1,7 @@
+"""Module to prepare and merge TMDB & MovieLens data."""
+
 import pandas as pd
+
 from src.settings import Settings
 
 
