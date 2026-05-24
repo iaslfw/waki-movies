@@ -89,7 +89,7 @@ class MoodPredictor:
             return_tensors="pt",  # 'pt' = PyTorch-Tensoren
             padding=True,
             truncation=True,
-            max_length=128,
+            max_length=256,
         )
         inputs_dict: dict[str, torch.Tensor] = dict(inputs)  # type: ignore
         inputs_device = {k: v.to(self.device) for k, v in inputs_dict.items()}
