@@ -13,7 +13,13 @@ wheels/
 # IDE and editor files
 .vscode/
 .idea/
+.DS_Store
 
 # files & folders
 datasets/
+info/
+logs/
+models/
 
+*.json
+*.csv
