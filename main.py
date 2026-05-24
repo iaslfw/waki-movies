@@ -17,11 +17,12 @@ def main() -> None:
     # upload_data_to_hugging_face(path=upload_path, repo_id=Settings.HF_REPO_ID)
 
     local_csv_file = Settings.DATASET_PATH
+    mood_tags_json_file = Settings.MOOD_TAGS_PATH
     local_models_dir = Settings.MODELS_DIR
     model_path = local_models_dir / "final_model"
 
     # Check if local CSV file exists
-    if not local_csv_file.exists():
+    if not local_csv_file.exists() or not mood_tags_json_file.exists():
         print("Preparing local data...")
         asyncio.run(create_local_data_file())
 
@@ -44,6 +45,7 @@ def main() -> None:
 
     prediction: dict[str, float] = predictor.predict(Settings.test_input)
 
+    # Test if prediction works and print results
     print("Idea:")
     tag: str
     prob: float

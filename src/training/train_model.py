@@ -2,6 +2,8 @@
 Training model for multi-label classification
 """
 
+import argparse
+import datetime
 import os
 from typing import Any, cast
 
@@ -53,7 +55,7 @@ def compute_metrics(
     return {"macro_f1": float(macro_f1), "roc_auc": float(roc_auc)}
 
 
-def run_training(epochs: int = 12, batch_size: int = 32, dry_run: bool = False) -> None:
+def run_training(epochs: int = 12, batch_size: int = 24, dry_run: bool = False) -> None:
     """Configures and runs the model training.
 
     Args:
@@ -84,7 +86,11 @@ def run_training(epochs: int = 12, batch_size: int = 32, dry_run: bool = False) 
     )
 
     print("Config training-arguments...")
-    os.environ["TENSORBOARD_LOGGING_DIR"] = str(Settings.MODELS_DIR / "logs")
+    timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    run_name = f"run_{timestamp}-epochs{epochs}_bs{batch_size}"
+    logging_dir = Settings.MODELS_DIR / "logs" / run_name
+
+    os.environ["TENSORBOARD_LOGGING_DIR"] = str(logging_dir)
 
     training_args = TrainingArguments(
         output_dir=str(Settings.MODELS_DIR / "checkpoints"),
@@ -124,4 +130,16 @@ def run_training(epochs: int = 12, batch_size: int = 32, dry_run: bool = False) 
 
 
 if __name__ == "__main__":
-    run_training()
+    parser = argparse.ArgumentParser(
+        description="Train structural movie mood predictor model"
+    )
+    parser.add_argument(
+        "--epochs", type=int, default=12, help="Number of training epochs"
+    )
+    parser.add_argument("--batch_size", type=int, default=24, help="Batch size")
+    parser.add_argument(
+        "--dry_run", action="store_true", help="Run a quick test with minimal data"
+    )
+
+    args = parser.parse_args()
+    run_training(epochs=args.epochs, batch_size=args.batch_size, dry_run=args.dry_run)
