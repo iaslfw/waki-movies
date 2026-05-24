@@ -20,3 +20,6 @@ datasets/
 info/
 logs/
 models/
+
+*.json
+*.csv
