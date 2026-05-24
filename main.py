@@ -25,8 +25,6 @@ def main() -> None:
         bot.wait()
     except KeyboardInterrupt:
         pass
-    finally:
-        bot.stop()
 
 
 if __name__ == "__main__":
