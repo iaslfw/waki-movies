@@ -24,7 +24,7 @@ async def _download_data_from_hugging_face(
     """
     print(f"Start Download: {file_name}...")
     dataset: DatasetDict = await asyncio.to_thread(
-        lambda: load_dataset(repo_id, data_files=file_name, token=token)
+        lambda: load_dataset(repo_id, data_files=file_name, token=token or None)
     )
 
     df = cast(pd.DataFrame, dataset["train"].to_pandas())

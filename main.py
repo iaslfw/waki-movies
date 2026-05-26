@@ -13,8 +13,6 @@ from src.telegram_bot.bot import TelegramBot
 
 
 def main() -> None:
-    bot = TelegramBot()
-    bot.start()
 
     # upload_path: Path = Settings.BASE_DIR / "src" / "data" / "raw-movie_data"
     # upload_data_to_hugging_face(path=upload_path, repo_id=Settings.HF_REPO_ID)
@@ -40,26 +38,12 @@ def main() -> None:
         predictor = MoodPredictor()
         recommender = MovieRecommender(data_path=local_csv_file)
 
-        prediction: dict[str, float] = predictor.predict(Settings.test_input)
-
-        # Test if prediction works and print results
-        print("Idea:")
-        tag: str
-        prob: float
-        for tag, prob in prediction.items():
-            print(f"{tag}: {prob:.4f}")
-
-        # print("\nSuche nach den besten Filmen...")
-        results = recommender.get_recommendations(prediction, top_k=3)
-
-        for i, res in enumerate(results, 1):
-            score_percent: float = float(res["similarity_score"]) * 100
-            title: str = str(res["title"])
-            overview: str = str(res["overview"])
-            print(f"\nPlatz {i}: {title} (Match: {score_percent:.1f}%)")
-            print(f"Beschreibung: {overview[:150]}...")
-
+        # Bot
+        bot = TelegramBot(predictor=predictor, recommender=recommender)
+        bot.start()
+        print("Bot started.")
         bot.wait()
+
     except KeyboardInterrupt:
         pass
 

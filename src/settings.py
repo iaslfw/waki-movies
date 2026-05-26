@@ -26,6 +26,7 @@ class Settings:
     # Model and training configs
     MODEL_NAME = "distilbert-base-uncased"
     DECISION_THRESHOLD = 0.5
+    MAX_SEQUENCE_LENGTH = 512
 
     test_input = """I'm in the mood for a gripping survival story. 
     There's this movie about an astronaut who gets accidentally abandoned on Mars after 

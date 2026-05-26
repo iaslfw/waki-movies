@@ -51,11 +51,9 @@ def download_model_from_hugging_face(
 
         model = AutoModelForSequenceClassification.from_pretrained(  # type: ignore
             repo_id,  # type: ignore
-            token=Settings.HF_ACCESS_TOKEN,
         )
         tokenizer = AutoTokenizer.from_pretrained(  # type: ignore
             repo_id,  # type: ignore
-            token=Settings.HF_ACCESS_TOKEN,
         )
 
         model.save_pretrained(local_dir)  # type: ignore
