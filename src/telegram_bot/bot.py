@@ -1,3 +1,5 @@
+import asyncio
+import logging
 from threading import Thread
 from typing import Any
 
@@ -7,6 +9,8 @@ from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandl
 from src.inference.inference import MoodPredictor
 from src.inference.recommender import MovieRecommender
 from src.settings import Settings
+
+logger = logging.getLogger(__name__)
 
 
 class TelegramBot:
@@ -21,6 +25,7 @@ class TelegramBot:
 
         self.predictor = predictor
         self.recommender = recommender
+        self.recommendation_lock = asyncio.Lock()
         self.thread: Thread | None = None
         self.application = Application.builder().token(Settings.TELEGRAM_API_TOKEN).build()
         self.application.add_handler(CommandHandler("start", self.start_handler))
@@ -75,10 +80,28 @@ class TelegramBot:
             return
 
         user_message = update.message.text
-        prediction = self.predictor.predict(user_message)
-        recommendations = self.recommender.get_recommendations(prediction)
 
-        await update.message.reply_text(self.format_recommendations(recommendations))
+        try:
+            async with self.recommendation_lock:
+                recommendations = await asyncio.to_thread(
+                    self.get_recommendations_for_message,
+                    user_message,
+                )
+
+            await update.message.reply_text(self.format_recommendations(recommendations))
+        except Exception:
+            logger.exception("Failed to create movie recommendations.")
+            await update.message.reply_text(
+                "Sorry, I couldn't create recommendations right now. "
+                "Please try again later."
+            )
+
+    def get_recommendations_for_message(
+        self,
+        message: str,
+    ) -> list[dict[str, Any]]:
+        prediction = self.predictor.predict(message)
+        return self.recommender.get_recommendations(prediction)
 
     def format_recommendations(self, recommendations: list[dict[str, Any]]) -> str:
         lines = ["Here are some movies that match your request:\n"]
