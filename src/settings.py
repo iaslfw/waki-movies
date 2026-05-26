@@ -12,7 +12,8 @@ class Settings:
 
     # API Tokens
     HF_ACCESS_TOKEN: str = os.getenv("HF_ACCESS_TOKEN", "")
-    HF_REPO_ID: str = os.getenv("HF_REPO_ID", "")
+    HF_REPO_ID: str | None = os.getenv("HF_REPO_ID", None)
+    HF_MODEL_ID: str | None = os.getenv("HF_MODEL_ID", None)
     TELEGRAM_API_TOKEN: str | None = os.getenv("TELEGRAM_API_TOKEN")
 
     # Paths

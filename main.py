@@ -4,12 +4,12 @@ Main entry point for running the MoodPredictor and MovieRecommender.
 
 import asyncio
 
+from src.data.hugging_face import download_model_from_hugging_face
 from src.data.prepare_data import create_local_data_file
 from src.inference.inference import MoodPredictor
 from src.inference.recommender import MovieRecommender
 from src.settings import Settings
 from src.telegram_bot.bot import TelegramBot
-from src.training.train_model import run_training
 
 
 def main() -> None:
@@ -32,16 +32,9 @@ def main() -> None:
 
         # Checks if model exists
         if not model_path.exists():
-            print("No trained model found. Start training...")
-            print(
-                "Run: "
-                ""
-                "uv run tensorboard --logdir src/training/models"
-                ""
-                "To monitor training progress in TensorBoard"
+            download_model_from_hugging_face(
+                repo_id=Settings.HF_MODEL_ID, local_dir=model_path
             )
-
-            run_training(epochs=5, batch_size=8)
 
         # Init of predictor and recommender
         predictor = MoodPredictor()
