@@ -25,11 +25,13 @@ def load_movie_data(local_path: str | Path) -> DatasetDict:
     return dataset_dict
 
 
-def get_tokenized_dataset(max_length: int = 256) -> tuple[DatasetDict, Any]:
+def get_tokenized_dataset(
+    max_length: int = Settings.MAX_SEQUENCE_LENGTH,
+) -> tuple[DatasetDict, Any]:
     """Loads the dataset, tokenizes it, and returns the tokenized DatasetDict and tokenizer.
 
     Args:
-        max_length: Maximum sequence length for tokenization. Defaults to 256.
+        max_length: Maximum sequence length for tokenization.
 
     Returns:
         A tuple containing the tokenized DatasetDict and the tokenizer instance.

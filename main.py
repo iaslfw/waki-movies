@@ -38,30 +38,11 @@ def main() -> None:
         predictor = MoodPredictor()
         recommender = MovieRecommender(data_path=local_csv_file)
 
-        prediction: dict[str, float] = predictor.predict(Settings.test_input)
-
-        # Test if prediction works and print results
-        print("Idea:")
-        tag: str
-        prob: float
-        for tag, prob in prediction.items():
-            print(f"{tag}: {prob:.4f}")
-
-        # print("\nSuche nach den besten Filmen...")
-        results = recommender.get_recommendations(prediction, top_k=3)
-
-        for i, res in enumerate(results, 1):
-            score_percent: float = float(res["similarity_score"]) * 100
-            title: str = str(res["title"])
-            overview: str = str(res["overview"])
-            print(f"\nPlatz {i}: {title} (Match: {score_percent:.1f}%)")
-            print(f"Beschreibung: {overview[:150]}...")
-
         # Bot
-        bot = TelegramBot()
+        bot = TelegramBot(predictor=predictor, recommender=recommender)
         bot.start()
+        print("Bot started.")
         bot.wait()
-        print("Done.")
 
     except KeyboardInterrupt:
         pass
