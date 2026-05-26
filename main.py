@@ -13,8 +13,6 @@ from src.telegram_bot.bot import TelegramBot
 
 
 def main() -> None:
-    bot = TelegramBot()
-    bot.start()
 
     # upload_path: Path = Settings.BASE_DIR / "src" / "data" / "raw-movie_data"
     # upload_data_to_hugging_face(path=upload_path, repo_id=Settings.HF_REPO_ID)
@@ -59,7 +57,12 @@ def main() -> None:
             print(f"\nPlatz {i}: {title} (Match: {score_percent:.1f}%)")
             print(f"Beschreibung: {overview[:150]}...")
 
+        # Bot
+        bot = TelegramBot()
+        bot.start()
         bot.wait()
+        print("Done.")
+
     except KeyboardInterrupt:
         pass
 
