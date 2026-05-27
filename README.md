@@ -21,17 +21,17 @@ uv pip install torch --torch-backend=cu130 --reinstall
 Build the container via
 
 ```powershell
-docker build -t wake-movies .
+docker build -t waki-movies .
 ```
 
 Run & start the container
 ```powershell
-docker run -d \
-  --name waki-movies \
-  --restart unless-stopped \
-  --env-file .env \
-  -v "$PWD/src/training/models:/app/src/training/models" \ # Model-Folder get's mounted
-  -v "$PWD/src/data:/app/src/data" \ # Data-Folder get's mounted
+docker run -d `
+  --name waki-movies `
+  --restart unless-stopped `
+  --env-file .env `
+  -v "${PWD}/src/training/models:/app/src/training/models" `
+  -v "${PWD}/src/data:/app/src/data" `
   waki-movies:latest
 ```
 
