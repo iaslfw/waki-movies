@@ -12,7 +12,7 @@ for EPOCHS in "${EPOCHS_LIST[@]}"; do
         echo "Starting new Run: Epochs = $EPOCHS | Batch-Size = $BATCH"
         echo "====================================================="
         
-        uv run python -m src.training.train_model --epochs $EPOCHS --batch_size $BATCH
+        uv run --no-sync python -m src.training.train_model --epochs $EPOCHS --batch_size $BATCH
         
         echo "Run done!"
         echo ""

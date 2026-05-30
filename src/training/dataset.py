@@ -21,7 +21,10 @@ def load_movie_data(local_path: str | Path) -> DatasetDict:
     """
     dataset = load_dataset("csv", data_files=str(local_path))
 
-    dataset_dict = dataset["train"].train_test_split(test_size=0.1, seed=42)
+    dataset_dict = dataset["train"].train_test_split(
+        test_size=Settings.TEST_SPLIT_SIZE,
+        seed=Settings.RANDOM_SEED,
+    )
     return dataset_dict
 
 
@@ -46,7 +49,6 @@ def get_tokenized_dataset(
             Any,
             tokenizer(
                 examples["text"],
-                padding="max_length",
                 truncation=True,
                 max_length=max_length,
             ),

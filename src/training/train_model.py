@@ -7,60 +7,34 @@ import datetime
 import os
 from typing import Any, cast
 
-import numpy as np
-from sklearn.metrics import f1_score, roc_auc_score  # type: ignore
 from transformers import (  # type: ignore
     AutoModelForSequenceClassification,
-    EvalPrediction,
-    Trainer,
+    DataCollatorWithPadding,
     TrainingArguments,
 )
 
 from src.settings import Settings
 from src.training.dataset import get_tokenized_dataset
+from src.training.metrics import compute_metrics
+from src.training.training_utils import (
+    WeightedTrainer,
+    compute_pos_weight,
+    save_best_model_if_improved,
+)
 
 
-def compute_metrics(
-    eval_pred: EvalPrediction | tuple[np.ndarray[Any, Any], np.ndarray[Any, Any]],
-) -> dict[str, float]:
-    """Calculates macro F1-score and ROC-AUC for multi-label classification.
-
-    Args:
-        eval_pred: Either an EvalPrediction object or a tuple of (logits, labels).
-
-    Returns:
-        A dictionary with 'macro_f1' and 'roc_auc' scores.
-    """
-
-    logits: Any
-    labels: Any
-    if isinstance(eval_pred, tuple):
-        logits, labels = eval_pred
-    else:
-        logits, labels = eval_pred.predictions, eval_pred.label_ids
-
-    # Sigmoid function
-    probs = 1 / (1 + np.exp(-logits))
-    predictions = (probs >= Settings.DECISION_THRESHOLD).astype(float)
-
-    # Calculate metrics
-    macro_f1 = f1_score(labels, predictions, average="macro", zero_division=0)
-
-    try:
-        roc_auc = roc_auc_score(labels, probs, average="macro", multi_class="ovr")
-    except Exception as e:
-        print(f"Warnung bei ROC-AUC Berechnung (z.B. fehlende Klassenvarianz): {e}")
-        roc_auc = 0.0
-
-    return {"macro_f1": float(macro_f1), "roc_auc": float(roc_auc)}
-
-
-def run_training(epochs: int = 12, batch_size: int = 24, dry_run: bool = False) -> None:
+def run_training(
+    epochs: int = Settings.DEFAULT_TRAINING_EPOCHS,
+    batch_size: int = Settings.DEFAULT_TRAINING_BATCH_SIZE,
+    learning_rate: float = Settings.DEFAULT_LEARNING_RATE,
+    dry_run: bool = False,
+) -> None:
     """Configures and runs the model training.
 
     Args:
         epochs: Number of training epochs.
         batch_size: Batch size for training and evaluation.
+        learning_rate: Initial learning rate for training.
         dry_run: If True, runs a quick test with a small subset of the data.
     """
 
@@ -70,10 +44,10 @@ def run_training(epochs: int = 12, batch_size: int = 24, dry_run: bool = False) 
     if dry_run:
         print("Dry Run: Reduce size for testing-purpose...")
         tokenized_dataset["train"] = cast(Any, tokenized_dataset["train"]).select(
-            range(20)
+            range(Settings.DRY_RUN_TRAIN_SIZE)
         )
         tokenized_dataset["test"] = cast(Any, tokenized_dataset["test"]).select(
-            range(10)
+            range(Settings.DRY_RUN_TEST_SIZE)
         )
         epochs = 1
 
@@ -87,7 +61,7 @@ def run_training(epochs: int = 12, batch_size: int = 24, dry_run: bool = False) 
 
     print("Config training-arguments...")
     timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    run_name = f"run_{timestamp}-epochs{epochs}_bs{batch_size}"
+    run_name = f"run_{timestamp}-epochs{epochs}_bs{batch_size}_lr{learning_rate:g}"
     logging_dir = Settings.MODELS_DIR / "logs" / run_name
 
     os.environ["TENSORBOARD_LOGGING_DIR"] = str(logging_dir)
@@ -97,36 +71,56 @@ def run_training(epochs: int = 12, batch_size: int = 24, dry_run: bool = False) 
         eval_strategy="epoch",
         save_strategy="epoch",
         logging_strategy="epoch",
-        learning_rate=2e-5,
+        learning_rate=learning_rate,
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
         num_train_epochs=epochs,
-        weight_decay=0.01,
-        warmup_steps=0.1,
+        weight_decay=Settings.WEIGHT_DECAY,
+        warmup_steps=Settings.WARMUP_STEPS,
         load_best_model_at_end=True,
-        metric_for_best_model="macro_f1",
-        save_total_limit=2,
+        metric_for_best_model=Settings.METRIC_FOR_BEST_MODEL,
+        greater_is_better=True,
+        seed=Settings.RANDOM_SEED,
+        data_seed=Settings.RANDOM_SEED,
+        save_total_limit=Settings.SAVE_TOTAL_LIMIT,
         use_cpu=False,  # Allow MPS or CUDA if available
-        report_to="tensorboard",
+        report_to=Settings.TRAINING_REPORT_TO,
     )
 
+    data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
+
+    pos_weight = compute_pos_weight(tokenized_dataset["train"])
+
     print("init Trainer...")
-    trainer = Trainer(
+    trainer = WeightedTrainer(
         model=model,
         args=training_args,
         train_dataset=tokenized_dataset["train"],
         eval_dataset=tokenized_dataset["test"],
         processing_class=tokenizer,
+        data_collator=data_collator,
         compute_metrics=compute_metrics,
+        pos_weight=pos_weight,
     )
 
     print("start Training...")
     trainer.train()  # type: ignore
 
-    print(f"Safe best model in: {Settings.MODELS_DIR}")
-    model.save_pretrained(str(Settings.MODELS_DIR / "final_model"))  # type: ignore
-    tokenizer.save_pretrained(str(Settings.MODELS_DIR / "final_model"))
-    print("Training completed, model saved.")
+    if dry_run:
+        print("Dry run completed, model not saved.")
+        return
+
+    save_best_model_if_improved(
+        trainer=trainer,
+        tokenizer=tokenizer,
+        final_model_dir=Settings.MODELS_DIR / "final_model",
+        run_name=run_name,
+        epochs=epochs,
+        batch_size=batch_size,
+        learning_rate=learning_rate,
+    )
+
+    print("Training completed.")
 
 
 if __name__ == "__main__":
@@ -134,12 +128,31 @@ if __name__ == "__main__":
         description="Train structural movie mood predictor model"
     )
     parser.add_argument(
-        "--epochs", type=int, default=12, help="Number of training epochs"
+        "--epochs",
+        type=int,
+        default=Settings.DEFAULT_TRAINING_EPOCHS,
+        help="Number of training epochs",
     )
-    parser.add_argument("--batch_size", type=int, default=24, help="Batch size")
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=Settings.DEFAULT_TRAINING_BATCH_SIZE,
+        help="Batch size",
+    )
+    parser.add_argument(
+        "--learning_rate",
+        type=float,
+        default=Settings.DEFAULT_LEARNING_RATE,
+        help="Initial learning rate",
+    )
     parser.add_argument(
         "--dry_run", action="store_true", help="Run a quick test with minimal data"
     )
 
     args = parser.parse_args()
-    run_training(epochs=args.epochs, batch_size=args.batch_size, dry_run=args.dry_run)
+    run_training(
+        epochs=args.epochs,
+        batch_size=args.batch_size,
+        learning_rate=args.learning_rate,
+        dry_run=args.dry_run,
+    )
