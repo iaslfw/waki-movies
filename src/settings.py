@@ -27,6 +27,21 @@ class Settings:
     MODEL_NAME = "distilbert-base-uncased"
     DECISION_THRESHOLD = 0.5
     MAX_SEQUENCE_LENGTH = 512
+    RANDOM_SEED = 42
+    TEST_SPLIT_SIZE = 0.1
+    DEFAULT_TRAINING_EPOCHS = 12
+    DEFAULT_TRAINING_BATCH_SIZE = 24
+    DEFAULT_LEARNING_RATE = 2e-5
+    DRY_RUN_TRAIN_SIZE = 20
+    DRY_RUN_TEST_SIZE = 10
+    WARMUP_STEPS = 0.1
+    WEIGHT_DECAY = 0.01
+    SAVE_TOTAL_LIMIT = 2
+    METRIC_FOR_BEST_MODEL = "macro_f1"
+    TRAINING_REPORT_TO = "tensorboard"
+    THRESHOLD_SEARCH_START = 0.1
+    THRESHOLD_SEARCH_STOP = 0.91
+    THRESHOLD_SEARCH_STEP = 0.05
 
     test_input = """I'm in the mood for a gripping survival story. 
     There's this movie about an astronaut who gets accidentally abandoned on Mars after 
