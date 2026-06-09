@@ -52,7 +52,7 @@ def run_training(
         epochs = 1
 
     print(f"Init model: {Settings.MODEL_NAME}")
-    num_labels = len(Settings.create_mood_list())  # type: ignore
+    num_labels = len(Settings.create_movie_tag_list())  # type: ignore
     model: Any = cast(Any, AutoModelForSequenceClassification).from_pretrained(
         Settings.MODEL_NAME,
         problem_type="multi_label_classification",
@@ -125,7 +125,7 @@ def run_training(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Train structural movie mood predictor model"
+        description="Train structural movie-tag predictor model"
     )
     parser.add_argument(
         "--epochs",

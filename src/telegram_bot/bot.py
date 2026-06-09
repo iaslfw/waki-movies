@@ -6,7 +6,7 @@ from typing import Any
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
-from src.inference.inference import MoodPredictor
+from src.inference.inference import MovieTagPredictor
 from src.inference.recommender import MovieRecommender
 from src.settings import Settings
 
@@ -18,7 +18,7 @@ class TelegramBot:
 
     def __init__(
         self,
-        predictor: MoodPredictor,
+        predictor: MovieTagPredictor,
         recommender: MovieRecommender,
     ) -> None:
         Settings.validate()

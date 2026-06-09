@@ -1,5 +1,5 @@
 """
-Recommender module for finding similar movies based on mood vectors.
+Recommender module for finding similar movies based on movie-tag vectors.
 """
 
 import ast
@@ -17,11 +17,11 @@ from src.settings import Settings
 class MovieRecommender:
     df: pd.DataFrame
     movie_matrix: npt.NDArray[np.float32]
-    mood_tags: list[str]
+    movie_tags: list[str]
 
     def __init__(self, data_path: str | Path) -> None:
         """
-        Loads movie data and prepares the mood-vectors for recommendations
+        Loads movie data and prepares the movie-tag vectors for recommendations
 
         Args:
             data_path: Path to the CSV file containing movie data.
@@ -30,11 +30,11 @@ class MovieRecommender:
         if not path.exists():
             raise FileNotFoundError(f"No file found under: {path}.")
 
-        self.mood_tags = Settings.create_mood_list()
+        self.movie_tags = Settings.create_movie_tag_list()
 
         self.df = pd.read_csv(path)
 
-        print("Create mood vectors...")
+        print("Create movie-tag vectors...")
 
         def parse_labels(val: Any) -> list[float]:
             if isinstance(val, str):
@@ -46,7 +46,7 @@ class MovieRecommender:
                     pass
             elif isinstance(val, list):
                 return [float(x) for x in val]  # type: ignore
-            return [0.0] * len(self.mood_tags)
+            return [0.0] * len(self.movie_tags)
 
         self.df["labels"] = self.df["labels"].apply(parse_labels)
 
@@ -61,11 +61,11 @@ class MovieRecommender:
         Compares user vector with all movies, returns the top k most similiar movies.
 
         Args:
-            user_vector_dict: A dictionary mapping mood tags to their corresponding values for the user.
+            user_vector_dict: A dictionary mapping movie tags to their corresponding values for the user.
             top_k: The number of top recommendations to return.
         """
         user_vector = np.array(
-            [user_vector_dict.get(tag, 0.0) for tag in self.mood_tags], dtype=np.float32
+            [user_vector_dict.get(tag, 0.0) for tag in self.movie_tags], dtype=np.float32
         )
 
         user_vector_2d: npt.NDArray[np.float32] = user_vector.reshape(1, -1)

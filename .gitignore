@@ -23,4 +23,5 @@ logs/
 models/
 
 *.json
+!src/data/tag_alias_groups.json
 *.csv
