@@ -1,0 +1,284 @@
+import json
+from dataclasses import dataclass
+from typing import Any, Literal
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
+
+
+ChatAction = Literal["recommend", "clarify", "reject", "help", "smalltalk"]
+
+VALID_ACTIONS: set[str] = {"recommend", "clarify", "reject", "help", "smalltalk"}
+
+CHAT_DECISION_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {
+        "action": {
+            "type": "string",
+            "enum": ["recommend", "clarify", "reject", "help", "smalltalk"],
+        },
+        "cleaned_query": {
+            "anyOf": [
+                {"type": "string"},
+                {"type": "null"},
+            ],
+        },
+        "reply": {
+            "anyOf": [
+                {"type": "string"},
+                {"type": "null"},
+            ],
+        },
+    },
+    "required": ["action", "cleaned_query", "reply"],
+}
+
+RECOMMENDATION_INTRO_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {
+        "intro": {
+            "type": "string",
+        },
+    },
+    "required": ["intro"],
+}
+
+CHAT_CONTROLLER_SYSTEM_PROMPT = """
+You are the chat controller for WaKi-Movies, a Telegram movie recommendation bot.
+Decide how to handle exactly one user message.
+
+Return only JSON that matches the schema.
+
+Actions:
+- recommend: The user asks for a movie recommendation, genre, mood, plot, theme,
+  or a movie similar to another movie. Put a concise English recommendation query
+  into cleaned_query. Do not write a reply.
+- clarify: The user wants a recommendation but is too vague. Ask one short
+  follow-up question in reply.
+- reject: The message is nonsense, random characters, a random short fragment,
+  only symbols, or unrelated to movie recommendations. Explain briefly in reply.
+- help: The user asks what the bot can do or how to use it. Reply with short
+  examples.
+- smalltalk: The user greets or thanks the bot. Reply briefly and invite a movie
+  request.
+
+Rules:
+- Accept short, clear movie genres or moods such as "war", "horror", "comedy",
+  "sci-fi", "dark", "funny", or "romantic".
+- Reject random fragments such as "gre", "erb", "asdf", "+", "#", or "!!!".
+- Do not recommend actual movies yourself.
+- Replies must be in English.
+""".strip()
+
+RECOMMENDATION_INTRO_SYSTEM_PROMPT = """
+You write the opening sentence for a Telegram movie recommendation reply.
+
+The movie recommendations are already selected by another model. The application
+will append the actual movie list after your sentence.
+
+Write exactly one short sentence that:
+- leads into the recommendations and fits the user's request;
+- does not list movie titles;
+- does not mention match percentages;
+- avoids saying "Here are some movies that match your request".
+
+Return only JSON that matches the schema.
+""".strip()
+
+
+class ChatControllerError(RuntimeError):
+    """Raised when the external chat controller cannot return a valid decision."""
+
+
+@dataclass(frozen=True)
+class ChatDecision:
+    action: ChatAction
+    cleaned_query: str | None
+    reply: str | None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "ChatDecision":
+        action = str(data.get("action", "")).strip()
+        if action not in VALID_ACTIONS:
+            raise ChatControllerError(f"Invalid chat action: {action!r}")
+
+        cleaned_query = cls._optional_clean_string(data.get("cleaned_query"))
+        reply = cls._optional_clean_string(data.get("reply"))
+
+        return cls(
+            action=action,  # type: ignore[arg-type]
+            cleaned_query=cleaned_query,
+            reply=reply,
+        )
+
+    @staticmethod
+    def _optional_clean_string(value: Any) -> str | None:
+        if not isinstance(value, str):
+            return None
+
+        normalized = " ".join(value.strip().split())
+        return normalized or None
+
+
+class MistralChatController:
+    def __init__(
+        self,
+        api_key: str,
+        model: str,
+        api_url: str,
+        timeout_seconds: float,
+    ) -> None:
+        self.api_key = api_key
+        self.model = model
+        self.api_url = api_url
+        self.timeout_seconds = timeout_seconds
+
+    @property
+    def is_configured(self) -> bool:
+        return bool(self.api_key)
+
+    def decide(self, message: str) -> ChatDecision:
+        if not self.is_configured:
+            raise ChatControllerError("MISTRAL_API_KEY is missing.")
+
+        payload = {
+            "model": self.model,
+            "temperature": 0,
+            "max_tokens": 256,
+            "stream": False,
+            "messages": [
+                {"role": "system", "content": CHAT_CONTROLLER_SYSTEM_PROMPT},
+                {"role": "user", "content": message},
+            ],
+            "response_format": {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "chat_decision",
+                    "description": "Routing decision for the WaKi-Movies bot.",
+                    "schema": CHAT_DECISION_SCHEMA,
+                    "strict": True,
+                },
+            },
+        }
+
+        response_data = self._post_json(payload)
+        content = self._extract_message_content(response_data)
+        decision_data = self._parse_json_content(content)
+        return ChatDecision.from_dict(decision_data)
+
+    def write_recommendation_intro(
+        self,
+        user_message: str,
+        recommendation_query: str,
+        recommendations: list[dict[str, Any]],
+    ) -> str:
+        if not self.is_configured:
+            raise ChatControllerError("MISTRAL_API_KEY is missing.")
+
+        formatted_recommendations = []
+        for index, recommendation in enumerate(recommendations, 1):
+            score_percent = float(recommendation["similarity_score"]) * 100
+            formatted_recommendations.append({
+                "rank": index,
+                "title": str(recommendation["title"]),
+                "match_percent": f"{score_percent:.1f}%",
+                "overview": str(recommendation["overview"]),
+            })
+
+        user_payload = {
+            "user_message": user_message,
+            "recommendation_query": recommendation_query,
+            "recommendations": formatted_recommendations,
+        }
+        payload = {
+            "model": self.model,
+            "temperature": 0.2,
+            "max_tokens": 120,
+            "stream": False,
+            "messages": [
+                {"role": "system", "content": RECOMMENDATION_INTRO_SYSTEM_PROMPT},
+                {
+                    "role": "user",
+                    "content": json.dumps(user_payload, ensure_ascii=True),
+                },
+            ],
+            "response_format": {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "recommendation_intro",
+                    "description": "Opening sentence for selected movie recommendations.",
+                    "schema": RECOMMENDATION_INTRO_SCHEMA,
+                    "strict": True,
+                },
+            },
+        }
+
+        response_data = self._post_json(payload)
+        content = self._extract_message_content(response_data)
+        intro_data = self._parse_json_content(content)
+        intro = intro_data.get("intro")
+        if not isinstance(intro, str) or not intro.strip():
+            raise ChatControllerError("Mistral recommendation intro is invalid.")
+
+        return intro.strip()
+
+    def _post_json(self, payload: dict[str, Any]) -> dict[str, Any]:
+        request = Request(
+            self.api_url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            },
+            method="POST",
+        )
+
+        try:
+            with urlopen(request, timeout=self.timeout_seconds) as response:
+                body = response.read().decode("utf-8")
+        except HTTPError as exc:
+            body = exc.read().decode("utf-8", errors="replace")
+            raise ChatControllerError(
+                f"Mistral API returned HTTP {exc.code}: {body}"
+            ) from exc
+        except (TimeoutError, URLError) as exc:
+            raise ChatControllerError("Mistral API request failed.") from exc
+
+        try:
+            loaded = json.loads(body)
+        except json.JSONDecodeError as exc:
+            raise ChatControllerError("Mistral API returned invalid JSON.") from exc
+
+        if not isinstance(loaded, dict):
+            raise ChatControllerError("Mistral API returned an unexpected payload.")
+
+        return loaded
+
+    @staticmethod
+    def _extract_message_content(response_data: dict[str, Any]) -> str | dict[str, Any]:
+        try:
+            content = response_data["choices"][0]["message"]["content"]
+        except (KeyError, IndexError, TypeError) as exc:
+            raise ChatControllerError("Mistral API response has no message.") from exc
+
+        if not isinstance(content, (str, dict)):
+            raise ChatControllerError("Mistral API response message is invalid.")
+
+        return content
+
+    @staticmethod
+    def _parse_json_content(content: str | dict[str, Any]) -> dict[str, Any]:
+        if isinstance(content, dict):
+            return content
+
+        try:
+            loaded = json.loads(content)
+        except json.JSONDecodeError as exc:
+            raise ChatControllerError("Mistral decision is not valid JSON.") from exc
+
+        if not isinstance(loaded, dict):
+            raise ChatControllerError("Mistral decision is not a JSON object.")
+
+        return loaded
