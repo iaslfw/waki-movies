@@ -15,6 +15,13 @@ class Settings:
     HF_REPO_ID: str | None = os.getenv("HF_REPO_ID", None)
     HF_MODEL_ID: str | None = os.getenv("HF_MODEL_ID", None)
     TELEGRAM_API_TOKEN: str | None = os.getenv("TELEGRAM_API_TOKEN")
+    MISTRAL_API_KEY: str = os.getenv("MISTRAL_API_KEY", "")
+    MISTRAL_MODEL: str = os.getenv("MISTRAL_MODEL", "mistral-small-latest")
+    MISTRAL_API_URL: str = os.getenv(
+        "MISTRAL_API_URL",
+        "https://api.mistral.ai/v1/chat/completions",
+    )
+    MISTRAL_TIMEOUT_SECONDS: float = float(os.getenv("MISTRAL_TIMEOUT_SECONDS", "10"))
 
     # Paths
     BASE_DIR = Path(__file__).parent.parent
@@ -72,4 +79,9 @@ class Settings:
             print(
                 "Warning: HF_ACCESS_TOKEN or HF_REPO_ID is missing. "
                 "Hugging Face Hub upload will be disabled. Check .env.template"
+            )
+        if not cls.MISTRAL_API_KEY:
+            print(
+                "Warning: MISTRAL_API_KEY is missing. "
+                "Mistral chat routing will use the local fallback."
             )

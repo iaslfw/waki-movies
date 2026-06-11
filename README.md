@@ -8,6 +8,14 @@ Use the default PyTorch build on Mac or machines without a dedicated NVIDIA GPU:
 uv sync
 ```
 
+For Mistral chat routing and recommendation reply formatting, add these values to
+`.env`:
+
+```env
+MISTRAL_API_KEY=your_mistral_api_key
+MISTRAL_MODEL=mistral-small-latest
+```
+
 On the CUDA training machine, sync first, then install the CUDA 13.0 PyTorch
 build and verify that PyTorch can see the GPU:
 
