@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import re
 from threading import Thread
 from typing import Any
 
@@ -38,31 +39,8 @@ HELP_REPLY = (
     "- I like movies like The Matrix"
 )
 SMALLTALK_REPLY = "Hi! Send me a genre, movie title, or short description."
-KNOWN_SINGLE_WORD_REQUESTS = {
-    "action",
-    "adventure",
-    "anime",
-    "comedy",
-    "crime",
-    "dark",
-    "drama",
-    "family",
-    "fantasy",
-    "funny",
-    "happy",
-    "horror",
-    "kids",
-    "romance",
-    "romantic",
-    "sad",
-    "scary",
-    "sci-fi",
-    "scifi",
-    "thriller",
-    "war",
-    "western",
-}
 VAGUE_SINGLE_WORD_REQUESTS = {"film", "movie", "recommendation", "something"}
+_NON_ALNUM_PATTERN = re.compile(r"[^a-z0-9]+")
 
 
 class TelegramBot:
@@ -207,10 +185,28 @@ class TelegramBot:
             return self.get_fallback_chat_decision(message)
 
         try:
-            return await asyncio.to_thread(self.chat_controller.decide, message)
+            decision = await asyncio.to_thread(self.chat_controller.decide, message)
         except ChatControllerError:
             logger.exception("Mistral chat controller failed. Using local fallback.")
             return self.get_fallback_chat_decision(message)
+
+        return self.normalize_chat_decision(decision, message)
+
+    def normalize_chat_decision(
+        self, decision: ChatDecision, message: str
+    ) -> ChatDecision:
+        if decision.action != "clarify":
+            return decision
+
+        normalized_message = self.normalize_user_message(message)
+        if not self.contains_known_movie_tag(normalized_message):
+            return decision
+
+        return ChatDecision(
+            action="recommend",
+            cleaned_query=decision.cleaned_query or normalized_message,
+            reply=None,
+        )
 
     def get_fallback_chat_decision(self, message: str) -> ChatDecision:
         normalized_message = self.normalize_user_message(message)
@@ -247,8 +243,8 @@ class TelegramBot:
     def normalize_user_message(message: str) -> str:
         return " ".join(message.strip().split())
 
-    @staticmethod
-    def is_valid_movie_request(message: str) -> bool:
+    @classmethod
+    def is_valid_movie_request(cls, message: str) -> bool:
         lower_message = message.lower()
         tokens = lower_message.split()
         meaningful_character_count = sum(char.isalnum() for char in message)
@@ -258,9 +254,37 @@ class TelegramBot:
             return False
 
         if len(tokens) == 1:
-            return tokens[0] in KNOWN_SINGLE_WORD_REQUESTS
+            return cls.is_known_single_word_request(tokens[0])
 
         return True
+
+    @classmethod
+    def is_known_single_word_request(cls, token: str) -> bool:
+        return token in cls.get_known_request_terms()
+
+    @classmethod
+    def contains_known_movie_tag(cls, message: str) -> bool:
+        normalized_message = cls.normalize_for_matching(message)
+        if not normalized_message:
+            return False
+
+        padded_message = f" {normalized_message} "
+        return any(
+            f" {term} " in padded_message for term in cls.get_known_request_terms()
+        )
+
+    @staticmethod
+    def normalize_for_matching(text: str) -> str:
+        lower_text = text.lower()
+        alnum_text = _NON_ALNUM_PATTERN.sub(" ", lower_text)
+        return " ".join(alnum_text.split())
+
+    @classmethod
+    def get_known_request_terms(cls) -> set[str]:
+        known_terms = {
+            cls.normalize_for_matching(tag) for tag in Settings.create_mood_list()
+        }
+        return {term for term in known_terms if len(term) >= 2}
 
     @staticmethod
     def is_vague_movie_request(message: str) -> bool:
