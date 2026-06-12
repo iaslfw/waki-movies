@@ -13,7 +13,7 @@ from telegram.ext import (
     filters,
 )
 
-from src.inference.inference import MoodPredictor
+from src.inference.inference import MovieTagPredictor
 from src.inference.recommender import MovieRecommender
 from src.settings import Settings
 from src.telegram_bot.chat_controller import (
@@ -48,7 +48,7 @@ class TelegramBot:
 
     def __init__(
         self,
-        predictor: MoodPredictor,
+        predictor: MovieTagPredictor,
         recommender: MovieRecommender,
     ) -> None:
         Settings.validate()
@@ -282,7 +282,7 @@ class TelegramBot:
     @classmethod
     def get_known_request_terms(cls) -> set[str]:
         known_terms = {
-            cls.normalize_for_matching(tag) for tag in Settings.create_mood_list()
+            cls.normalize_for_matching(tag) for tag in Settings.create_movie_tag_list()
         }
         return {term for term in known_terms if len(term) >= 2}
 

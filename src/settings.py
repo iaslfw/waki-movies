@@ -27,12 +27,17 @@ class Settings:
     BASE_DIR = Path(__file__).parent.parent
     DATASETS_DIR = Path(__file__).parent / "data"
     MODELS_DIR = Path(__file__).parent / "training" / "models"
-    MOOD_TAGS_PATH = Path(__file__).parent / "data" / "mood_tags.json"
+    MOVIE_TAGS_PATH = Path(__file__).parent / "data" / "movie_tags.json"
+    MOOD_TAGS_PATH = MOVIE_TAGS_PATH
+    TAG_ALIAS_GROUPS_PATH = Path(__file__).parent / "data" / "tag_alias_groups.json"
     DATASET_PATH = Path(__file__).parent / "data" / "cleaned_movie_data.csv"
+    DATA_REPORT_PATH = Path(__file__).parent / "data" / "data_quality_report.json"
 
     # Model and training configs
     MODEL_NAME = "distilbert-base-uncased"
     DECISION_THRESHOLD = 0.5
+    MOVIE_TAG_COUNT = 150
+    DEDUPLICATE_BY_TITLE = False
     MAX_SEQUENCE_LENGTH = 512
     RANDOM_SEED = 42
     TEST_SPLIT_SIZE = 0.1
@@ -57,16 +62,20 @@ class Settings:
     """  # Description of aqua-man
 
     @classmethod
-    def create_mood_list(cls) -> list[str]:
-        if cls.MOOD_TAGS_PATH.exists():
-            with open(cls.MOOD_TAGS_PATH, "r", encoding="utf-8") as f:
-                mood_tags = json.load(f)
-                return mood_tags
+    def create_movie_tag_list(cls) -> list[str]:
+        if cls.MOVIE_TAGS_PATH.exists():
+            with open(cls.MOVIE_TAGS_PATH, "r", encoding="utf-8") as f:
+                movie_tags = json.load(f)
+                return movie_tags
         else:
             print(
-                f"Warning: {cls.MOOD_TAGS_PATH} not found. Returning empty mood list."
+                f"Warning: {cls.MOVIE_TAGS_PATH} not found. Returning empty tag list."
             )
             return []
+
+    @classmethod
+    def create_mood_list(cls) -> list[str]:
+        return cls.create_movie_tag_list()
 
     @classmethod
     def validate(cls) -> None:

@@ -1,0 +1,31 @@
+{
+    "based on book": [
+        "adapted from:book",
+        "based on a book"
+    ],
+    "cult classic": [
+        "cult film"
+    ],
+    "funny": [
+        "humorous",
+        "very funny"
+    ],
+    "interesting": [
+        "very interesting"
+    ],
+    "melancholic": [
+        "melancholy"
+    ],
+    "romance": [
+        "romantic"
+    ],
+    "suspense": [
+        "suspenseful"
+    ],
+    "revenge": [
+        "vengeance"
+    ],
+    "violence": [
+        "violent"
+    ]
+}

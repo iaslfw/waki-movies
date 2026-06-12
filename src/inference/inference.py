@@ -1,5 +1,5 @@
 """
-Inference module for predicting movie mood tags.
+Inference module for predicting movie tags.
 """
 
 from pathlib import Path
@@ -19,11 +19,11 @@ from transformers import (
 from src.settings import Settings
 
 
-class MoodPredictor:
+class MovieTagPredictor:
     tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast
     model: PreTrainedModel
     device: torch.device
-    mood_tags: list[str]
+    movie_tags: list[str]
 
     def __init__(self, model_path: str | Path | None = None) -> None:
         """
@@ -69,9 +69,18 @@ class MoodPredictor:
         self.model.to(device=self.device)  # type: ignore
         self.model.eval()
 
-        self.mood_tags = Settings.create_mood_list()
+        self.movie_tags = Settings.create_movie_tag_list()
+        model_label_count = int(getattr(self.model.config, "num_labels", 0))
+        if model_label_count != len(self.movie_tags):
+            raise ValueError(
+                "Model/tag mismatch: "
+                f"model has {model_label_count} labels, "
+                f"but {Settings.MOVIE_TAGS_PATH} contains {len(self.movie_tags)} tags. "
+                "Regenerate the dataset and retrain the model."
+            )
+
         print(
-            f"Model loaded on device: {self.device}. {len(self.mood_tags)} mood tags loaded."
+            f"Model loaded on device: {self.device}. {len(self.movie_tags)} movie tags loaded."
         )
 
     def predict(self, text: str) -> dict[str, float]:
@@ -80,9 +89,9 @@ class MoodPredictor:
         and their calculated probabilities.
 
         Args:
-            text: The input text for which to predict mood tags.
+            text: The input text for which to predict movie tags.
         Returns:
-            A dictionary mapping each mood tag to its predicted probability.
+            A dictionary mapping each movie tag to its predicted probability.
         """
         inputs = self.tokenizer(
             text,
@@ -101,10 +110,13 @@ class MoodPredictor:
         probs: npt.NDArray[Any] = 1.0 / (1.0 + np.exp(-logits))
 
         results: dict[str, float] = {}
-        for i, tag in enumerate(self.mood_tags):
+        for i, tag in enumerate(self.movie_tags):
             results[tag] = float(probs[i])
 
         sorted_results = dict(
             sorted(results.items(), key=lambda item: item[1], reverse=True)
         )
         return sorted_results
+
+
+MoodPredictor = MovieTagPredictor

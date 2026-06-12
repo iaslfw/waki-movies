@@ -11,7 +11,7 @@ from src.settings import Settings
 
 
 def load_movie_data(local_path: str | Path) -> DatasetDict:
-    """Loads the movie mood dataset from Hugging Face Hub or falls back to local CSV.
+    """Loads the movie-tag dataset from Hugging Face Hub or falls back to local CSV.
 
     Args:
         local_path: Path to the local CSV file containing the dataset.

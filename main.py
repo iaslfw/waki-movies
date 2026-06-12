@@ -1,5 +1,5 @@
 """
-Main entry point for running the MoodPredictor and MovieRecommender.
+Main entry point for running the MovieTagPredictor and MovieRecommender.
 """
 
 import asyncio
@@ -7,7 +7,7 @@ import logging
 
 from src.data.hugging_face import download_model_from_hugging_face
 from src.data.prepare_data import create_local_data_file
-from src.inference.inference import MoodPredictor
+from src.inference.inference import MovieTagPredictor
 from src.inference.recommender import MovieRecommender
 from src.settings import Settings
 from src.telegram_bot.bot import TelegramBot
@@ -29,13 +29,13 @@ def main() -> None:
     # upload_data_to_hugging_face(path=upload_path, repo_id=Settings.HF_REPO_ID)
 
     local_csv_file = Settings.DATASET_PATH
-    mood_tags_json_file = Settings.MOOD_TAGS_PATH
+    movie_tags_json_file = Settings.MOVIE_TAGS_PATH
     local_models_dir = Settings.MODELS_DIR
     model_path = local_models_dir / "final_model"
 
     try:
         # Check if local CSV file exists
-        if not local_csv_file.exists() or not mood_tags_json_file.exists():
+        if not local_csv_file.exists() or not movie_tags_json_file.exists():
             print("Preparing local data...")
             asyncio.run(create_local_data_file())
 
@@ -46,7 +46,7 @@ def main() -> None:
             )
 
         # Init of predictor and recommender
-        predictor = MoodPredictor()
+        predictor = MovieTagPredictor()
         recommender = MovieRecommender(data_path=local_csv_file)
 
         # Bot

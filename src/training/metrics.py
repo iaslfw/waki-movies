@@ -1,4 +1,4 @@
-"""Metric helpers for multi-label movie mood training."""
+"""Metric helpers for multi-label movie-tag training."""
 
 from typing import Any
 
