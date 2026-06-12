@@ -3,6 +3,7 @@ Main entry point for running the MovieTagPredictor and MovieRecommender.
 """
 
 import asyncio
+import logging
 
 from src.data.hugging_face import download_model_from_hugging_face
 from src.data.prepare_data import create_local_data_file
@@ -11,8 +12,18 @@ from src.inference.recommender import MovieRecommender
 from src.settings import Settings
 from src.telegram_bot.bot import TelegramBot
 
+LOG_FORMAT = "%(asctime)s %(levelname)s %(name)s: %(message)s"
+
+
+def configure_logging() -> None:
+    logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
+    logging.getLogger("telegram").setLevel(logging.WARNING)
+
 
 def main() -> None:
+    configure_logging()
 
     # upload_path: Path = Settings.BASE_DIR / "src" / "data" / "raw-movie_data"
     # upload_data_to_hugging_face(path=upload_path, repo_id=Settings.HF_REPO_ID)
