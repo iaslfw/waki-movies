@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import re
 from threading import Thread
 from typing import Any
 
@@ -21,26 +20,29 @@ from src.telegram_bot.chat_controller import (
     ChatDecision,
     MistralChatController,
 )
+from src.telegram_bot.recommendation_formatter import (
+    format_recommendation_items,
+    format_recommendations,
+)
+from src.telegram_bot.replies import (
+    CLARIFY_REQUEST_REPLY,
+    HELP_REPLY,
+    INVALID_REQUEST_REPLY,
+    RECOMMENDATION_ERROR_REPLY,
+    SMALLTALK_REPLY,
+    START_REPLY,
+)
+from src.telegram_bot.request_validation import (
+    contains_known_movie_tag,
+    get_known_request_terms,
+    is_known_single_word_request,
+    is_vague_movie_request,
+    is_valid_movie_request,
+    normalize_for_matching,
+    normalize_user_message,
+)
 
 logger = logging.getLogger(__name__)
-
-INVALID_REQUEST_REPLY = (
-    "Please send a movie genre or short description, "
-    'for example: "funny sci-fi movie" or "dark horror thriller".'
-)
-CLARIFY_REQUEST_REPLY = (
-    "Sure. What kind of movie are you in the mood for: funny, scary, "
-    "romantic, action, or something else?"
-)
-HELP_REPLY = (
-    "You can write something like:\n\n"
-    "- I want a funny movie\n"
-    "- Recommend a sci-fi movie\n"
-    "- I like movies like The Matrix"
-)
-SMALLTALK_REPLY = "Hi! Send me a genre, movie title, or short description."
-VAGUE_SINGLE_WORD_REQUESTS = {"film", "movie", "recommendation", "something"}
-_NON_ALNUM_PATTERN = re.compile(r"[^a-z0-9]+")
 
 
 class TelegramBot:
@@ -92,11 +94,7 @@ class TelegramBot:
         if update.message is None:
             return
 
-        await update.message.reply_text(
-            "Hi! I'm WaKi-Movies. "
-            "Send me a movie request, genre, or short description, "
-            "and I'll recommend matching movies."
-        )
+        await update.message.reply_text(START_REPLY)
 
     async def help_handler(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE
@@ -134,6 +132,7 @@ class TelegramBot:
             async with self.recommendation_lock:
                 recommendations = await asyncio.to_thread(
                     self.get_recommendations_for_message,
+                    user_message,
                     recommendation_query,
                 )
 
@@ -145,17 +144,19 @@ class TelegramBot:
             await update.message.reply_text(recommendation_reply)
         except Exception:
             logger.exception("Failed to create movie recommendations.")
-            await update.message.reply_text(
-                "Sorry, I couldn't create recommendations right now. "
-                "Please try again later."
-            )
+            await update.message.reply_text(RECOMMENDATION_ERROR_REPLY)
 
     def get_recommendations_for_message(
         self,
-        message: str,
+        user_message: str,
+        recommendation_query: str,
     ) -> list[dict[str, Any]]:
-        prediction = self.predictor.predict(message)
-        return self.recommender.get_recommendations(prediction)
+        prediction = self.predictor.predict(recommendation_query)
+        title_match_query = f"{user_message} {recommendation_query}"
+        return self.recommender.get_recommendations(
+            prediction,
+            query=title_match_query,
+        )
 
     async def format_recommendation_reply(
         self,
@@ -241,70 +242,34 @@ class TelegramBot:
 
     @staticmethod
     def normalize_user_message(message: str) -> str:
-        return " ".join(message.strip().split())
+        return normalize_user_message(message)
 
     @classmethod
     def is_valid_movie_request(cls, message: str) -> bool:
-        lower_message = message.lower()
-        tokens = lower_message.split()
-        meaningful_character_count = sum(char.isalnum() for char in message)
-        letter_count = sum(char.isalpha() for char in message)
-
-        if meaningful_character_count < 2 or letter_count < 2:
-            return False
-
-        if len(tokens) == 1:
-            return cls.is_known_single_word_request(tokens[0])
-
-        return True
+        return is_valid_movie_request(message, cls.get_known_request_terms())
 
     @classmethod
     def is_known_single_word_request(cls, token: str) -> bool:
-        return token in cls.get_known_request_terms()
+        return is_known_single_word_request(token, cls.get_known_request_terms())
 
     @classmethod
     def contains_known_movie_tag(cls, message: str) -> bool:
-        normalized_message = cls.normalize_for_matching(message)
-        if not normalized_message:
-            return False
-
-        padded_message = f" {normalized_message} "
-        return any(
-            f" {term} " in padded_message for term in cls.get_known_request_terms()
-        )
+        return contains_known_movie_tag(message, cls.get_known_request_terms())
 
     @staticmethod
     def normalize_for_matching(text: str) -> str:
-        lower_text = text.lower()
-        alnum_text = _NON_ALNUM_PATTERN.sub(" ", lower_text)
-        return " ".join(alnum_text.split())
+        return normalize_for_matching(text)
 
     @classmethod
     def get_known_request_terms(cls) -> set[str]:
-        known_terms = {
-            cls.normalize_for_matching(tag) for tag in Settings.create_movie_tag_list()
-        }
-        return {term for term in known_terms if len(term) >= 2}
+        return get_known_request_terms(Settings.create_movie_tag_list())
 
     @staticmethod
     def is_vague_movie_request(message: str) -> bool:
-        tokens = message.lower().split()
-        return len(tokens) == 1 and tokens[0] in VAGUE_SINGLE_WORD_REQUESTS
+        return is_vague_movie_request(message)
 
     def format_recommendations(self, recommendations: list[dict[str, Any]]) -> str:
-        lines = ["I found these movie picks for you:\n"]
-        lines.append(self.format_recommendation_items(recommendations))
-        return "\n".join(lines).strip()
+        return format_recommendations(recommendations)
 
     def format_recommendation_items(self, recommendations: list[dict[str, Any]]) -> str:
-        lines = []
-        for i, recommendation in enumerate(recommendations, 1):
-            score_percent = float(recommendation["similarity_score"]) * 100
-            title = str(recommendation["title"])
-            overview = str(recommendation["overview"])
-
-            lines.append(f"{i}. {title} ({score_percent:.1f}% Match)")
-            lines.append(overview)
-            lines.append("")
-
-        return "\n".join(lines).strip()
+        return format_recommendation_items(recommendations)
