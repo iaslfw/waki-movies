@@ -1,11 +1,11 @@
 #!/bin/bash
 
 EXPERIMENTS=(
-    "10 8 2e-5"
-    "12 8 2e-5"
+    "6 8 3e-5"
     "8 8 3e-5"
     "10 8 3e-5"
-    "8 4 2e-5"
+    "10 8 2e-5"
+    "12 8 2e-5"
 )
 
 echo "Starting selected hyperparameter tuning..."
