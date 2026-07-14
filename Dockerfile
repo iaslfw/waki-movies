@@ -20,7 +20,7 @@ RUN apt-get update \
 COPY pyproject.toml ./
 COPY . .
 
-RUN uv sync --locked
+RUN uv sync
 
 CMD ["uv", "run", "--no-sync", "python", "main.py"]
 
