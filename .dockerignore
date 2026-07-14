@@ -19,5 +19,4 @@ src/training/models/
 *.log
 *.tmp
 *.lock
-!uv.lock
 .*cache
