@@ -39,6 +39,24 @@ Selected training experiments can be started from PowerShell via Git Bash:
 & "C:\Program Files\Git\bin\bash.exe" "./run_selected_experiments.sh"
 ```
 
+## Tests and quality checks
+
+Install the dev tools and run the regression tests:
+
+```powershell
+uv sync --group dev
+uv run pytest
+```
+
+Useful focused commands:
+
+```powershell
+uv run pytest tests/test_dataset_splits.py
+uv run pytest tests/test_similarity.py
+uv run ruff check src tests main.py
+uv run ruff format src tests main.py
+```
+
 
 ## Run container
 
