@@ -1,23 +1,20 @@
 [project]
 name = "waki-movies"
 version = "0.1.0"
-description = "Add your description here"
+description = "Telegram movie recommendation bot backed by a trained multi-label movie tag model."
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "accelerate>=1.13.0",
     "datasets>=4.8.5",
-    "dotenv>=0.9.9",
     "huggingface-hub>=1.15.0",
     "numpy>=2.4.6",
     "pandas>=3.0.3",
-    "pycowsay>=0.0.0.2",
     "python-dotenv>=1.2.2",
     "python-telegram-bot>=22.7",
     "scikit-learn>=1.8.0",
     "setuptools<81",
     "tensorboard>=2.20.0",
-    "tensorflow>=2.21.0",
     "torch>=2.12.0",
     "transformers>=5.9.0",
 ]

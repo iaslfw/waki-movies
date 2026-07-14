@@ -55,9 +55,11 @@ def download_model_from_hugging_face(
 
         model = AutoModelForSequenceClassification.from_pretrained(  # type: ignore
             repo_id,  # type: ignore
+            token=Settings.HF_ACCESS_TOKEN or None,
         )
         tokenizer = AutoTokenizer.from_pretrained(  # type: ignore
             repo_id,  # type: ignore
+            token=Settings.HF_ACCESS_TOKEN or None,
         )
 
         model.save_pretrained(local_dir)  # type: ignore
@@ -65,5 +67,7 @@ def download_model_from_hugging_face(
 
         print(f"Model successfully downloaded and saved to\n-> {local_dir}")
     except Exception as e:
-        logger.exception("Error occurred while downloading model from Hugging Face Hub.")
+        logger.exception(
+            "Error occurred while downloading model from Hugging Face Hub."
+        )
         raise RuntimeError("Failed to download model from Hugging Face Hub.") from e

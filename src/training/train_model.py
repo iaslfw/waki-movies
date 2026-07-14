@@ -133,7 +133,9 @@ def run_training(
             batch_size=batch_size,
             learning_rate=learning_rate,
         )
-        print("Held-out test split was not evaluated because validation did not improve.")
+        print(
+            "Held-out test split was not evaluated because validation did not improve."
+        )
         return
 
     test_metrics = None

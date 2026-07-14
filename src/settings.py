@@ -12,11 +12,11 @@ class Settings:
 
     # API Tokens
     HF_ACCESS_TOKEN: str = os.getenv("HF_ACCESS_TOKEN", "")
-    HF_REPO_ID: str | None = os.getenv("HF_REPO_ID", None)
-    HF_MODEL_ID: str | None = os.getenv("HF_MODEL_ID", None)
+    HF_REPO_ID: str | None = os.getenv("HF_REPO_ID") or "iaslfw/waki-movie_raw"
+    HF_MODEL_ID: str | None = os.getenv("HF_MODEL_ID") or "iaslfw/waki-movie_model"
     TELEGRAM_API_TOKEN: str | None = os.getenv("TELEGRAM_API_TOKEN")
     MISTRAL_API_KEY: str = os.getenv("MISTRAL_API_KEY", "")
-    MISTRAL_MODEL: str = os.getenv("MISTRAL_MODEL", "mistral-small-latest")
+    MISTRAL_MODEL: str = os.getenv("MISTRAL_MODEL") or "mistral-small-latest"
     MISTRAL_API_URL: str = os.getenv(
         "MISTRAL_API_URL",
         "https://api.mistral.ai/v1/chat/completions",
@@ -25,10 +25,8 @@ class Settings:
 
     # Paths
     BASE_DIR = Path(__file__).parent.parent
-    DATASETS_DIR = Path(__file__).parent / "data"
     MODELS_DIR = Path(__file__).parent / "training" / "models"
     MOVIE_TAGS_PATH = Path(__file__).parent / "data" / "movie_tags.json"
-    MOOD_TAGS_PATH = MOVIE_TAGS_PATH
     TAG_ALIAS_GROUPS_PATH = Path(__file__).parent / "data" / "tag_alias_groups.json"
     DATASET_PATH = Path(__file__).parent / "data" / "cleaned_movie_data.csv"
     DATA_REPORT_PATH = Path(__file__).parent / "data" / "data_quality_report.json"
@@ -68,12 +66,6 @@ class Settings:
     THRESHOLD_SEARCH_STOP = 0.91
     THRESHOLD_SEARCH_STEP = 0.05
 
-    test_input = """I'm in the mood for a gripping survival story. 
-    There's this movie about an astronaut who gets accidentally abandoned on Mars after 
-    his crew assumes he died in a massive storm. It's all about his fight to stay alive 
-    against the odds—it sounds like a really intense, high-stakes watch.
-    """  # Description of aqua-man
-
     @classmethod
     def create_movie_tag_list(cls) -> list[str]:
         if cls.MOVIE_TAGS_PATH.exists():
@@ -87,23 +79,31 @@ class Settings:
             return []
 
     @classmethod
-    def create_mood_list(cls) -> list[str]:
-        return cls.create_movie_tag_list()
-
-    @classmethod
     def validate(cls) -> None:
         if not cls.TELEGRAM_API_TOKEN:
             raise ValueError(
                 "TELEGRAM_API_TOKEN is missing. "
                 "Please create a .env file based on .env.template."
             )
-        if not cls.HF_ACCESS_TOKEN or not cls.HF_REPO_ID:
-            print(
-                "Warning: HF_ACCESS_TOKEN or HF_REPO_ID is missing. "
-                "Hugging Face Hub upload will be disabled. Check .env.template"
-            )
         if not cls.MISTRAL_API_KEY:
             raise ValueError(
                 "MISTRAL_API_KEY is missing. "
                 "WaKi-Movies uses Mistral for chat routing and localization."
+            )
+
+    @classmethod
+    def require_dataset_source(cls) -> None:
+        if not cls.HF_REPO_ID:
+            raise ValueError(
+                "HF_REPO_ID is missing. It is required to prepare local movie data "
+                "when src/data/cleaned_movie_data.csv or src/data/movie_tags.json "
+                "does not exist."
+            )
+
+    @classmethod
+    def require_model_source(cls) -> None:
+        if not cls.HF_MODEL_ID:
+            raise ValueError(
+                "HF_MODEL_ID is missing. It is required to download final_model "
+                "when src/training/models/final_model does not exist."
             )
