@@ -1,11 +1,14 @@
 """Module to upload merged dataset to HuggingFace Hub."""
 
+import logging
 from pathlib import Path
 
 from huggingface_hub import login, upload_folder
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 from src.settings import Settings
+
+logger = logging.getLogger(__name__)
 
 
 def upload_data_to_hugging_face(path: Path, repo_id: str) -> None:
@@ -22,7 +25,8 @@ def upload_data_to_hugging_face(path: Path, repo_id: str) -> None:
         upload_folder(folder_path=path, repo_id=repo_id, repo_type="dataset")
         print(f"Dataset successfully uploaded to Hugging Face Hub: {repo_id}")
     except Exception as e:
-        print(f"Error occurred while uploading data to Hugging Face Hub: {e}")
+        logger.exception("Error occurred while uploading data to Hugging Face Hub.")
+        raise RuntimeError("Failed to upload data to Hugging Face Hub.") from e
 
 
 def download_model_from_hugging_face(
@@ -61,4 +65,5 @@ def download_model_from_hugging_face(
 
         print(f"Model successfully downloaded and saved to\n-> {local_dir}")
     except Exception as e:
-        print(f"Error occurred while downloading model from Hugging Face Hub: {e}")
+        logger.exception("Error occurred while downloading model from Hugging Face Hub.")
+        raise RuntimeError("Failed to download model from Hugging Face Hub.") from e
