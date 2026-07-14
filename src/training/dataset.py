@@ -170,8 +170,7 @@ def _compute_target_split_sizes(
         for split_name, split_fraction in split_fractions.items()
     }
     target_sizes = {
-        split_name: math.floor(exact_sizes[split_name])
-        for split_name in SPLIT_NAMES
+        split_name: math.floor(exact_sizes[split_name]) for split_name in SPLIT_NAMES
     }
 
     remaining_rows = total_rows - sum(target_sizes.values())
@@ -203,9 +202,9 @@ def _choose_split_for_row(
     row_labels = label_matrix[row_index] > 0
     if row_labels.any():
         target_counts = np.maximum(target_label_counts[:, row_labels], 1.0)
-        label_deficits = target_label_counts[:, row_labels] - current_label_counts[
-            :, row_labels
-        ]
+        label_deficits = (
+            target_label_counts[:, row_labels] - current_label_counts[:, row_labels]
+        )
         label_scores = (label_deficits / target_counts).sum(axis=1)
     else:
         label_scores = np.zeros(len(SPLIT_NAMES), dtype=np.float64)

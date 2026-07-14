@@ -218,9 +218,7 @@ def _write_best_model_info(
                 "best_validation_roc_auc": best_validation_metrics[
                     "best_validation_roc_auc"
                 ],
-                "best_validation_loss": best_validation_metrics[
-                    "best_validation_loss"
-                ],
+                "best_validation_loss": best_validation_metrics["best_validation_loss"],
                 "best_decision_threshold": best_validation_metrics[
                     "best_decision_threshold"
                 ],

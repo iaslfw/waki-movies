@@ -24,9 +24,7 @@ def configure_logging() -> None:
 
 def main() -> None:
     configure_logging()
-
-    # upload_path: Path = Settings.BASE_DIR / "src" / "data" / "raw-movie_data"
-    # upload_data_to_hugging_face(path=upload_path, repo_id=Settings.HF_REPO_ID)
+    Settings.validate()
 
     local_csv_file = Settings.DATASET_PATH
     movie_tags_json_file = Settings.MOVIE_TAGS_PATH
@@ -36,11 +34,13 @@ def main() -> None:
     try:
         # Check if local CSV file exists
         if not local_csv_file.exists() or not movie_tags_json_file.exists():
+            Settings.require_dataset_source()
             print("Preparing local data...")
             asyncio.run(create_local_data_file())
 
         # Checks if model exists
         if not model_path.exists():
+            Settings.require_model_source()
             download_model_from_hugging_face(
                 repo_id=Settings.HF_MODEL_ID, local_dir=model_path
             )

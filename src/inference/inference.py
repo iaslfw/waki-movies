@@ -117,6 +117,3 @@ class MovieTagPredictor:
             sorted(results.items(), key=lambda item: item[1], reverse=True)
         )
         return sorted_results
-
-
-MoodPredictor = MovieTagPredictor

@@ -165,9 +165,6 @@ class MovieRecommender:
             missing_tag_penalty=Settings.REFERENCE_MISSING_TAG_PENALTY,
         )
 
-    def _positive_movie_matrix(self) -> npt.NDArray[np.float32]:
-        return self.positive_movie_matrix
-
     def _apply_reference_title_boost(
         self,
         similarities: npt.NDArray[np.float32],
