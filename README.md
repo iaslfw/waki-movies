@@ -8,8 +8,8 @@ Use the default PyTorch build on Mac or machines without a dedicated NVIDIA GPU:
 uv sync
 ```
 
-For Mistral chat routing and recommendation reply formatting, add these values to
-`.env`:
+Mistral is required for chat routing, query cleanup, localization, and
+recommendation reply formatting. Add these values to `.env`:
 
 ```env
 MISTRAL_API_KEY=your_mistral_api_key

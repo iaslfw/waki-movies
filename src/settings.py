@@ -103,7 +103,7 @@ class Settings:
                 "Hugging Face Hub upload will be disabled. Check .env.template"
             )
         if not cls.MISTRAL_API_KEY:
-            print(
-                "Warning: MISTRAL_API_KEY is missing. "
-                "Mistral chat routing will use the local fallback."
+            raise ValueError(
+                "MISTRAL_API_KEY is missing. "
+                "WaKi-Movies uses Mistral for chat routing and localization."
             )
